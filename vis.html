@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quantum Circuit Visualization on Canvas</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+    <script>
+        var maxQubitsSupported = 10;
+        var maxStepsSupported = 20;
+        var circuitData = {
+            "qubits": 1,
+            "gates": [
+            ]
+        };
+
+        function populateNumQubitsSelect() {
+            const numQubitsSelect = document.getElementById('numQubitsSelect');
+            for (let i = 1; i <= maxQubitsSupported; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.text = i + ' Qubits';
+                numQubitsSelect.appendChild(option);
+            }
+        }
+        populatePhaseSelect = () => {
+            const phaseSelect = document.getElementById('phaseSelect');
+            //first delete all options if any
+            while (phaseSelect.firstChild) {
+                phaseSelect.removeChild(phaseSelect.firstChild);
+            }
+            if (document.getElementById('gateTypeSelect').value === 'PHASE') {
+                for (let i = 0; i <= 10; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.text = '\u03C0/' + Math.pow(2,i);
+                    phaseSelect.appendChild(option);
+                }
+            }
+        }
+        function populateTimeSelect() {
+            const timeSelect = document.getElementById('timeSelect');
+            for (let i = 0; i < maxStepsSupported; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.text = 'Step ' + i;
+                timeSelect.appendChild(option);
+            }
+        }
+
+        function resetCircuit(numQubits) {
+            circuitData = {
+                "qubits": numQubits,
+                "gates": [
+                ]
+            };
+            drawCircuit(circuitData);
+        }
+        function onNumQubitsChange() {
+            const numQubits = parseInt(document.getElementById('numQubitsSelect').value);
+            populateQubitSelect();
+            resetCircuit(numQubits);
+        }
+        
+        function onGateTypeChange() {
+            populateControlSelect();
+            populatePhaseSelect();
+        }
+
+        function populateQubitSelect(){
+
+            const qubitSelect = document.getElementById('qubitSelect');
+            //first delete all options if any
+            while (qubitSelect.firstChild) {
+                qubitSelect.removeChild(qubitSelect.firstChild);
+            }
+            for (let i = 0; i < circuitData.qubits; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.text = 'Qubit ' + i;
+                qubitSelect.appendChild(option);
+            }
+        }
+
+        populateControlSelect = () => {
+            const gateType = document.getElementById('gateTypeSelect').value;
+            const controlSelect = document.getElementById('controlSelect');
+            //first delete all options if any
+            while (controlSelect.firstChild) {
+                controlSelect.removeChild(controlSelect.firstChild);
+            }
+            if (gateType === 'CX' || gateType === 'PHASE') {
+                for (let i = 0; i < circuitData.qubits; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.text = 'Qubit ' + i;
+                    controlSelect.appendChild(option);
+                }
+            }
+        }
+
+        function makeRestObject(circuit) {
+            const restObject = {
+                "qubits": circuit.qubits,
+                "gates": []
+            };
+            typeMap = {
+                'H': 'Hadamard',
+                'X': 'Not',
+                'CX': 'ControlledNot',
+                'PHASE': 'ControlledPhase'
+            };
+            circuit.gates.forEach(gate => {
+                gateObject = {
+                    "type": typeMap[gate.type],
+                    "data": {
+                        "wire": gate.qubits[0],
+                        "time": gate.time,
+                    }
+                };
+                if (gate.type === 'PHASE'|| gate.type === 'CX') {
+                    gateObject.data.control = gate.qubits[1];
+                }
+                if(gate.type === 'PHASE') {
+                    gateObject.data.angle = gate.angle;
+                }
+                restObject.gates.push(gateObject);
+            });
+            return restObject;
+        }
+
+        function sendCircuitToRun() {
+            const restObject = makeRestObject(circuitData);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'http://localhost:8080/run_circuit', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify(restObject));
+        }
+
+        function addGate() {
+            const gateType = document.getElementById('gateTypeSelect').value;
+            const qubit = parseInt(document.getElementById('qubitSelect').value);
+            const control = parseInt(document.getElementById('controlSelect').value);
+            const time = parseInt(document.getElementById('timeSelect').value);
+            const phase = parseInt(document.getElementById('phaseSelect').value);
+            circuitData.gates.push({"type": gateType, "qubits": [qubit, control], "time": time, "angle": phase});
+            drawCircuit(circuitData);
+        }
+        function drawCircuit(circuitData) {
+            const canvas = document.getElementById('quantumCanvas');
+            if (!canvas.getContext) {
+                return; // Canvas not supported
+            }
+            const ctx = canvas.getContext('2d');
+            const spacing = 20; // Space between qubit lines
+            const gateWidth = 20;
+            const startX = 20;
+            const startY = 30;
+
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for(let i = 0; i < 1000; i++);
+
+            // Draw qubit lines
+            for (let i = 0; i < circuitData.qubits; i++) {
+                const y = startY + i * spacing;
+                ctx.moveTo(startX, y);
+                ctx.lineTo(canvas.width - startX, y);
+                ctx.stroke();
+            }
+
+            // Draw gates
+            circuitData.gates.forEach(gate => {
+                qubit = gate.qubits[0];
+                if (gate.qubits.length > 1) { 
+                    control = gate.qubits[1];
+                } else {
+                    control = -1;
+                }
+
+                const gateX = startX + gate.time * gateWidth * 2; // Position gates with some spacing
+                const gateY = startY + qubit * spacing; // Center gate on line
+        
+                const controlY = startY + control * spacing;
+
+                // Connect control and target
+                if (gate.qubits.length > 1) {
+                    const controlY = startY + control * spacing;
+                    const targetY = startY + qubit * spacing;
+                    ctx.beginPath();
+                    ctx.moveTo(gateX, controlY );
+                    ctx.lineTo(gateX, targetY );
+                    ctx.stroke();
+
+                    // Draw control
+                    ctx.beginPath();
+                    ctx.arc(gateX, controlY , 5, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                }
+
+                switch (gate.type) {
+                    case 'H':
+                        ctx.fillStyle = '#FFFFFF'; 
+                        ctx.fillRect(gateX-10, gateY-10 , 20, 20);
+                        ctx.fillStyle = '#000000'; 
+                        ctx.strokeRect(gateX-10, gateY-10 , 20, 20);
+                        ctx.fillText('H', gateX-5, gateY+5);
+                        break;
+                    case 'X':
+                        ctx.fillStyle = '#FFFFFF'; 
+                        ctx.fillRect(gateX-10, gateY-10 , 20, 20);
+                        ctx.fillStyle = '#000000'; 
+                        ctx.strokeRect(gateX-10, gateY-10 , 20, 20);
+                        ctx.fillText('X', gateX-5, gateY+5);
+                        break;
+                    case 'CX':
+                        // Draw target if not the first qubit
+                        
+                        ctx.beginPath();
+                        ctx.arc(gateX, gateY, 5, 0, 2 * Math.PI);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(gateX - 5, gateY);
+                        ctx.lineTo(gateX + 5, gateY);
+                        ctx.moveTo(gateX, gateY - 5);
+                        ctx.lineTo(gateX, gateY + 5);
+                        ctx.stroke();
+                        
+                        break;
+                    case 'PHASE':
+                        ctx.fillStyle = '#FFFFFF'; 
+
+                        ctx.beginPath();
+                        ctx.arc(gateX, gateY , 10,0, 2*Math.PI);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#000000'; 
+                        ctx.stroke();
+                        ctx.fillText(Math.pow(2,gate.angle), gateX-7, gateY+3);
+                        break;
+                }
+                
+            });
+        }
+
+    </script>
+
+</head>
+<body>
+    <div> 
+        <select id="numQubitsSelect" onchange="onNumQubitsChange()">
+        </select>
+    </div>
+    <canvas id="quantumCanvas" width="1000" height="500"></canvas>
+    <div> 
+        <select id="gateTypeSelect" onchange="onGateTypeChange()">
+            <option value="H">Hadamard</option>
+            <option value="CX">Conditional Not</option>
+            <option value="X">Not</option>
+            <option value="PHASE">Conditional Phase</option>
+        </select>
+        <select id="qubitSelect">
+        </select>
+        <select id="controlSelect"></select>
+        <select id="phaseSelect"></select>
+        <select id="timeSelect"></select>
+        <button onclick="addGate()">Add Gate</button>
+        </select>
+    </div>
+    <div>
+        <button onclick="sendCircuitToRun()">Run Circuit</button>
+    </div>
+    <script>
+        populateNumQubitsSelect();
+        populateQubitSelect();
+        populateTimeSelect();
+        populateControlSelect();
+        populatePhaseSelect();
+        drawCircuit(circuitData);
+    </script>
+
+    </body>
+</html>
