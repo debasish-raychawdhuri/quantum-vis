@@ -97,7 +97,7 @@ async fn run_circuit(circuit: web::Json<Circuit>) -> impl Responder {
     let output = qcirc.run_once(&input);
     let output_str = format!("{:?}", output);
     HttpResponse::Ok()
-        .content_type("text/plain")
+        .content_type("application/json")
         .body(output_str)
 }
 
