@@ -8,7 +8,7 @@
         }
     </style>
     <script>
-        var maxQubitsSupported = 10;
+        var maxQubitsSupported = 7;
         var maxStepsSupported = 20;
         var circuitData = {
             "qubits": 1,
@@ -65,6 +65,8 @@
 
         function displayResponse(response) {
             document.getElementById('response').innerText = response;
+            circuitData.output = response;
+            drawCircuit(circuitData);
         }
 
         function populateQubitSelect(){
@@ -196,7 +198,7 @@
             for (let i = 0; i < circuitData.qubits; i++) {
                 const y = startY + i * spacing;
                 ctx.moveTo(startX, y);
-                ctx.lineTo(canvas.width - startX, y);
+                ctx.lineTo(canvas.width - startX-20, y);
                 ctx.stroke();
             }
 
@@ -273,6 +275,12 @@
                 }
                 
             });
+            //Draw the output if there is any
+            if (circuitData.output){
+                for (let i = 0; i < circuitData.output.length; i++) {
+                    ctx.fillText(circuitData.output[i], canvas.width - 20, startY + i * spacing);
+                }
+            }
         }
 
     </script>
@@ -283,7 +291,7 @@
         <select id="numQubitsSelect" onchange="onNumQubitsChange()">
         </select>
     </div>
-    <canvas id="quantumCanvas" width="1000" height="500"></canvas>
+    <canvas id="quantumCanvas" width="1000" height="250"></canvas>
     <div> 
         <select id="gateTypeSelect" onchange="onGateTypeChange()">
             <option value="H">Hadamard</option>
