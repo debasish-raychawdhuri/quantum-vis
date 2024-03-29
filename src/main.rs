@@ -31,6 +31,11 @@ enum QuantumGate {
         control: u8,
         time: u8,
     },
+    Phase {
+        angle: f64,
+        wire: u8,
+        time: u8,
+    },
 }
 
 fn time_of(qg: QuantumGate) -> u8 {
@@ -48,6 +53,7 @@ fn time_of(qg: QuantumGate) -> u8 {
             control,
             time,
         } => time,
+        QuantumGate::Phase { angle, wire, time } => time,
     }
 }
 
@@ -88,6 +94,13 @@ async fn run_circuit(circuit: web::Json<Circuit>) -> impl Responder {
                 time: _time,
             } => {
                 qcirc = qcirc.controled_gate(&QCS::new(1).phase(angle), &[wire], &[control]);
+            }
+            QuantumGate::Phase {
+                angle,
+                wire,
+                time: _time,
+            } => {
+                qcirc = qcirc.gate(&qcirc.phase(angle), &[wire]);
             }
         }
     }

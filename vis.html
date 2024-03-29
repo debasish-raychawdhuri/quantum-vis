@@ -34,7 +34,7 @@
             while (phaseSelect.firstChild) {
                 phaseSelect.removeChild(phaseSelect.firstChild);
             }
-            if (document.getElementById('gateTypeSelect').value === 'PHASE') {
+            if (document.getElementById('gateTypeSelect').value === 'CPHASE' || document.getElementById('gateTypeSelect').value === 'PHASE') {
                 for (let i = 0; i <= 10; i++) {
                     const option = document.createElement('option');
                     option.value = i;
@@ -94,7 +94,7 @@
             while (controlSelect.firstChild) {
                 controlSelect.removeChild(controlSelect.firstChild);
             }
-            if (gateType === 'CX' || gateType === 'PHASE') {
+            if (gateType === 'CX' || gateType === 'CPHASE') {
                 for (let i = 0; i < circuitData.qubits; i++) {
                     const option = document.createElement('option');
                     option.value = i;
@@ -123,7 +123,8 @@
                 'H': 'Hadamard',
                 'X': 'Not',
                 'CX': 'ControlledNot',
-                'PHASE': 'ControlledPhase'
+                'CPHASE': 'ControlledPhase',
+                'PHASE': 'Phase'
             };
             circuit.gates.forEach(gate => {
                 gateObject = {
@@ -133,10 +134,10 @@
                         "time": gate.time,
                     }
                 };
-                if (gate.type === 'PHASE'|| gate.type === 'CX') {
+                if (gate.type === 'CPHASE'|| gate.type === 'CX') {
                     gateObject.data.control = gate.qubits[1];
                 }
-                if(gate.type === 'PHASE') {
+                if(gate.type === 'CPHASE' || gate.type === 'PHASE' ) {
                     gateObject.data.angle = gate.angle;
                 }
                 restObject.gates.push(gateObject);
@@ -182,14 +183,14 @@
             if (circuitData.taken.get(qubit + '-' + time)) {
                 alert('Qubit ' + qubit + ' already has a gate at time ' + time);
                 return;
-            }else if (gateType == 'CX' || gateType == 'PHASE') {
+            }else if (gateType == 'CX' || gateType == 'CPHASE') {
                 if (circuitData.taken.get(control + '-' + time)) {
                     alert('Qubit ' + control + ' already has a gate at time ' + time);
                     return;
                 }
             }
             circuitData.taken.set(qubit + '-' + time, true);
-            if (gateType == 'CX' || gateType == 'PHASE') {
+            if (gateType == 'CX' || gateType == 'CPHASE') {
                 circuitData.taken.set(control + '-' + time, true);
             }
             circuitData.gates.push({"type": gateType, "qubits": [qubit, control], "time": time, "angle": phase});
@@ -277,6 +278,17 @@
                         ctx.stroke();
                         
                         break;
+                    case 'CPHASE':
+                        ctx.fillStyle = '#FFFFFF'; 
+
+                        ctx.beginPath();
+                        ctx.arc(gateX, gateY , 10,0, 2*Math.PI);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#000000'; 
+                        ctx.stroke();
+                        ctx.fillText(Math.pow(2,gate.angle), gateX-7, gateY+3);
+                        break;
                     case 'PHASE':
                         ctx.fillStyle = '#FFFFFF'; 
 
@@ -318,7 +330,8 @@
             <option value="H">Hadamard</option>
             <option value="CX">Conditional Not</option>
             <option value="X">Not</option>
-            <option value="PHASE">Conditional Phase</option>
+            <option value="PHASE">Phase</option>
+            <option value="CPHASE">Conditional Phase</option>
         </select>
         <select id="qubitSelect">
         </select>
